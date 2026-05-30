@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<window type="dialog">
+  <defaultcontrol>100</defaultcontrol>
+  <coordinates>
+    <left>100</left>
+    <top>80</top>
+  </coordinates>
+  <width>1100</width>
+  <height>700</height>
+  <controls>
+    <control type="list" id="100">
+      <left>20</left>
+      <top>20</top>
+      <width>1060</width>
+      <height>660</height>
+      <onup>100</onup>
+      <ondown>100</ondown>
+      <onleft>100</onleft>
+      <onright>100</onright>
+      <itemlayout width="1060" height="50">
+        <control type="label">
+          <left>10</left>
+          <top>5</top>
+          <width>1040</width>
+          <height>40</height>
+          <font>font13</font>
+          <label>$INFO[ListItem.Label]</label>
+        </control>
+      </itemlayout>
+      <focusedlayout width="1060" height="50">
+        <control type="label">
+          <left>10</left>
+          <top>5</top>
+          <width>1040</width>
+          <height>40</height>
+          <font>font13</font>
+          <label>$INFO[ListItem.Label]</label>
+          <textcolor>white</textcolor>
+        </control>
+      </focusedlayout>
+    </control>
+  </controls>
+</window>
