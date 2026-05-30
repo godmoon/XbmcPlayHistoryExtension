@@ -109,8 +109,7 @@ def show_history(db):
             _play_with_resume(file_path, resume_time)
             break
         elif action == "play":
-            _open_dir_and_play(file_path)
-            xbmc.Player().play(file_path)
+            _play_from_start(file_path)
             break
         elif action == "delete":
             db.delete_entry(item["id"])
@@ -121,14 +120,23 @@ def show_history(db):
                 break
 
 
-def _open_dir_and_play(file_path):
+def _navigate_to_dir(file_path):
     dir_path = os.path.dirname(file_path)
-    xbmc.executebuiltin('ActivateWindow(Videos,"{}")'.format(dir_path))
-    xbmc.sleep(200)
+    if dir_path:
+        xbmc.executebuiltin('ActivateWindow(Videos,"{}")'.format(dir_path))
+
+
+def _wait_for_playback_end():
+    player = xbmc.Player()
+    monitor = xbmc.Monitor()
+    while not monitor.abortRequested():
+        if not player.isPlayingVideo() and not player.isPlayingAudio():
+            break
+        if monitor.waitForAbort(1):
+            break
 
 
 def _play_with_resume(file_path, resume_time):
-    _open_dir_and_play(file_path)
     player = xbmc.Player()
     player.play(file_path)
     wait_ms = 0
@@ -139,3 +147,11 @@ def _play_with_resume(file_path, resume_time):
         wait_ms += 100
     if player.isPlayingVideo() or player.isPlayingAudio():
         player.seekTime(resume_time)
+    _wait_for_playback_end()
+    _navigate_to_dir(file_path)
+
+
+def _play_from_start(file_path):
+    xbmc.Player().play(file_path)
+    _wait_for_playback_end()
+    _navigate_to_dir(file_path)
