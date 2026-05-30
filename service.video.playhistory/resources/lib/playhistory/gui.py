@@ -109,6 +109,7 @@ def show_history(db):
             _play_with_resume(file_path, resume_time)
             break
         elif action == "play":
+            _open_dir_and_play(file_path)
             xbmc.Player().play(file_path)
             break
         elif action == "delete":
@@ -120,7 +121,14 @@ def show_history(db):
                 break
 
 
+def _open_dir_and_play(file_path):
+    dir_path = os.path.dirname(file_path)
+    xbmc.executebuiltin('ActivateWindow(Videos,"{}")'.format(dir_path))
+    xbmc.sleep(200)
+
+
 def _play_with_resume(file_path, resume_time):
+    _open_dir_and_play(file_path)
     player = xbmc.Player()
     player.play(file_path)
     wait_ms = 0
