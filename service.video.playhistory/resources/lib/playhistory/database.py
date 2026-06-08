@@ -39,7 +39,7 @@ class PlayHistoryDB:
             conn.commit()
             conn.close()
 
-    def add_play_start(self, file_path, title="", media_type="unknown"):
+    def add_play_start(self, file_path, title="", media_type="unknown", max_entries=100):
         now = datetime.now().isoformat()
         with self._lock:
             conn = self._get_conn()
@@ -54,19 +54,17 @@ class PlayHistoryDB:
                     INSERT INTO play_history (file_path, title, media_type, play_start)
                     VALUES (?, ?, ?, ?)
                 """, (file_path, title, media_type, now))
+            self._cleanup(conn, max_entries)
             conn.commit()
             conn.close()
 
-    def update_play_stop(self, file_path, resume_time=0.0, total_time=0.0):
-        now = datetime.now().isoformat()
-        with self._lock:
-            conn = self._get_conn()
-            conn.execute("""
-                UPDATE play_history SET play_end=?, resume_time=?, total_time=?
-                WHERE file_path=?
-            """, (now, resume_time, total_time, file_path))
-            conn.commit()
-            conn.close()
+    @staticmethod
+    def _cleanup(conn, max_entries):
+        conn.execute("""
+            DELETE FROM play_history WHERE id NOT IN (
+                SELECT id FROM play_history ORDER BY play_start DESC LIMIT ?
+            )
+        """, (max_entries,))
 
     def get_history(self, limit=100):
         with self._lock:
@@ -94,13 +92,4 @@ class PlayHistoryDB:
             conn.commit()
             conn.close()
 
-    def cleanup_old_entries(self, max_entries):
-        with self._lock:
-            conn = self._get_conn()
-            conn.execute("""
-                DELETE FROM play_history WHERE id NOT IN (
-                    SELECT id FROM play_history ORDER BY play_start DESC LIMIT ?
-                )
-            """, (max_entries,))
-            conn.commit()
-            conn.close()
+

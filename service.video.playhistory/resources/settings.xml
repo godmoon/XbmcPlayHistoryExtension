@@ -5,7 +5,7 @@
             <group id="1">
                 <setting id="max_history" type="integer" label="Max History" help="Maximum number of history entries to keep">
                     <level>0</level>
-                    <default>200</default>
+                    <default>100</default>
                     <constraints>
                         <minimum>10</minimum>
                         <maximum>1000</maximum>

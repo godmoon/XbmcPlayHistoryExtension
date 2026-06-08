@@ -10,7 +10,6 @@ class PlaybackTracker:
         self.resume_time = 0
         self.total_time = 0
         self.was_playing = False
-        self._cleanup_counter = 0
         self._ready = False
 
     def poll(self):
@@ -57,12 +56,7 @@ class PlaybackTracker:
         self.total_time = player.getTotalTime()
 
         log("new file: {} title={}".format(file_path, title))
-        self.db.add_play_start(file_path, title, "video")
-
-        self._cleanup_counter += 1
-        if self._cleanup_counter >= 5:
-            self.db.cleanup_old_entries(get_setting("max_history", 200))
-            self._cleanup_counter = 0
+        self.db.add_play_start(file_path, title, "video", get_setting("max_history", 100))
 
     def _on_stop(self, player):
         file_path = self.current_file

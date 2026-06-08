@@ -88,6 +88,10 @@ def show_history(db):
         labels = []
         actions = []
 
+        if xbmc.Player().isPlayingVideo():
+            labels.append("倍速控制")
+            actions.append("speed")
+
         if resume_time > 0 and total_time > 0:
             resume_pct = resume_time / total_time
             if resume_pct < 0.95:
@@ -105,7 +109,10 @@ def show_history(db):
             continue
 
         action = actions[choice]
-        if action == "resume":
+        if action == "speed":
+            show_speed_control()
+            continue
+        elif action == "resume":
             _play_with_resume(file_path, resume_time)
             break
         elif action == "play":
@@ -118,6 +125,28 @@ def show_history(db):
             if not items:
                 xbmcgui.Dialog().ok(ADDON_NAME, "记录已全部删除")
                 break
+
+
+def show_speed_control():
+    player = xbmc.Player()
+    if not player.isPlayingVideo():
+        xbmcgui.Dialog().notification(ADDON_NAME, "没有正在播放的视频", xbmcgui.NOTIFICATION_WARNING, 2000)
+        return
+
+    speeds = ["0.25x", "0.5x", "0.75x", "1.0x (正常)", "1.25x", "1.5x", "2.0x", "3.0x"]
+    values = [0.25, 0.5, 0.75, 1.0, 1.25, 1.5, 2.0, 3.0]
+
+    current = player.getSpeed()
+    default = -1
+    for i, v in enumerate(values):
+        if abs(current - v) < 0.01:
+            default = i
+            break
+
+    selected = xbmcgui.Dialog().select("选择播放速度 - {:.2f}x (当前)".format(current) if current != 1.0 else "选择播放速度", speeds, preselect=default)
+    if selected >= 0:
+        player.setSpeed(values[selected])
+        xbmcgui.Dialog().notification(ADDON_NAME, "播放速度: {}".format(speeds[selected]), xbmcgui.NOTIFICATION_INFO, 1500)
 
 
 def _navigate_to_dir(file_path):
