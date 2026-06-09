@@ -90,8 +90,8 @@ def show_history(db):
             labels.append("倍速控制")
             actions.append("speed")
 
-        labels.append("播放")
-        actions.append("play")
+        labels.append("定位")
+        actions.append("locate")
 
         labels.append("删除此记录")
         actions.append("delete")
@@ -104,13 +104,8 @@ def show_history(db):
         if action == "speed":
             show_speed_control()
             continue
-        elif action == "play":
-            resume_time = item.get("resume_time", 0) or 0
-            total_time = item.get("total_time", 0) or 0
-            if resume_time > 0 and total_time > 0 and (resume_time / total_time) < 0.95:
-                _play_from_history(db, file_path, resume_time)
-            else:
-                _play_from_history(db, file_path)
+        elif action == "locate":
+            _play_from_history(db, file_path)
             break
         elif action == "delete":
             db.delete_entry(item["id"])
@@ -143,7 +138,7 @@ def show_speed_control():
         xbmcgui.Dialog().notification(ADDON_NAME, "播放速度: {}".format(speeds[selected]), xbmcgui.NOTIFICATION_INFO, 1500)
 
 
-def _play_from_history(db, file_path, resume_time=None):
+def _play_from_history(db, file_path):
     _navigate_with_focus(file_path)
 
 
