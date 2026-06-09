@@ -143,56 +143,42 @@ def show_speed_control():
         xbmcgui.Dialog().notification(ADDON_NAME, "播放速度: {}".format(speeds[selected]), xbmcgui.NOTIFICATION_INFO, 1500)
 
 
-def _navigate_to_dir(file_path):
-    dir_path = os.path.dirname(file_path)
-    if dir_path:
-        xbmc.executebuiltin('ActivateWindow(Videos,"{}")'.format(dir_path))
-
-
-def _wait_for_playback_end():
-    player = xbmc.Player()
-    monitor = xbmc.Monitor()
-    while not monitor.abortRequested():
-        if not player.isPlayingVideo() and not player.isPlayingAudio():
-            break
-        if monitor.waitForAbort(1):
-            break
-
-
 def _play_from_history(db, file_path, resume_time=None):
-    if resume_time:
-        ret = xbmcgui.Dialog().contextmenu(["从 {} 继续播放".format(_format_time(resume_time)), "从头开始播放"])
-        if ret < 0:
-            return
-        resume = (ret == 0)
-    else:
-        resume = False
+    _navigate_with_focus(file_path)
 
+
+def _navigate_with_focus(file_path):
     dir_path = os.path.dirname(file_path)
-    if dir_path:
-        xbmc.executebuiltin('ActivateWindow(Videos,"{}")'.format(dir_path))
-        xbmc.sleep(700)
+    if not dir_path:
+        return
 
-    xbmc.executebuiltin('PlayMedia("{}")'.format(file_path))
-
-    if resume:
-        for _ in range(200):
-            p = xbmc.Player()
-            if p.isPlayingVideo() and p.getTotalTime() > 0:
-                p.seekTime(resume_time)
-                break
-            xbmc.sleep(100)
-
-    _wait_for_playback_end()
+    target = os.path.basename(file_path).lower()
 
     try:
-        p = xbmc.Player()
-        rtime = p.getTime()
-        ttime = p.getTotalTime()
-        if rtime > 0:
-            db.update_play_stop(file_path, rtime, ttime)
+        import json as _json
+        req = _json.dumps({
+            "jsonrpc": "2.0",
+            "method": "Files.GetDirectory",
+            "params": {"directory": dir_path, "media": "video"},
+            "id": 1,
+        })
+        resp = xbmc.executeJSONRPC(req)
+        data = _json.loads(resp)
+        items = data.get("result", {}).get("files", [])
+        pos = -1
+        for i, item in enumerate(items):
+            f = item.get("file", "")
+            if os.path.basename(f).lower() == target:
+                pos = i
+                break
+        if pos < 0:
+            return
     except Exception:
-        pass
+        return
 
-    xbmc.sleep(500)
-    _navigate_to_dir(file_path)
+    xbmc.executebuiltin('ActivateWindow(Videos,"{}")'.format(dir_path))
+    xbmc.sleep(800)
+
+    for _ in range(pos):
+        xbmc.executebuiltin("Action(Down)")
+        xbmc.sleep(60)

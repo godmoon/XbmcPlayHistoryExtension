@@ -133,6 +133,24 @@ Uses polling (`xbmc.Monitor.waitForAbort(1)` + `xbmc.Player().isPlayingVideo()`)
 
 A `_ready` flag waits until no video is playing before the tracker becomes active, avoiding phantom entries for videos already in progress when the service starts.
 
+### Directory navigation with file highlight
+
+When resuming/playing from history, instead of playing directly (which loses Kodi's native next/prev context), the addon navigates to the file's directory and highlights the target file using simulated `Action(Down)` key presses.
+
+**Position calculation** uses JSON-RPC `Files.GetDirectory` with `media="video"` to get only video files in Kodi's native sort order. The file's index in this filtered list matches the cursor position in the file browser view (no ".." offset needed since `media="video"` excludes directories). Press Down `pos` times, then the user presses Enter for full Kodi-native playback.
+
+### Remote debugging via HTTP POST
+
+During development, debugging Kodi addons running on another device (e.g., Android TV) is challenging because `xbmc.log()` is hard to access remotely. Two approaches were used:
+
+1. **Profile directory file**: Write debug lines to `special://profile/addon_data/service.video.playhistory/debug_focus.log`, then download via JSON-RPC `Files.PrepareDownload` + HTTP (VFS endpoint requires the same HTTP Basic auth as the rest of the web server).
+
+2. **HTTP POST to dev machine**: Set up a simple Python `HTTPServer` on the development machine, and have the addon POST debug lines via `urllib.urlopen`. This gives real-time access without restarting Kodi. Be careful: `urllib.urlopen` exceptions will pop a Kodi error notification unless wrapped in try/except. Also, the Kodi Python environment may not have network access on all platforms (Android blocks background HTTP by default).
+
+### xbmc.getInfoLabel caveats
+
+`xbmc.getInfoLabel("Container.CurrentItem.Label")` and related infolabels (`FileName`, `Path`) may not be available when the addon script runs. The script context does not have a live container reference in all Kodi versions. Always check with known-good infolabels like `System.Date` or `System.CurrentWindow` first. When infolabels fail, `xbmc.executeJSONRPC()` with `Files.GetDirectory` is a reliable alternative.
+
 ### Single record per file (upsert)
 
 `add_play_start` uses `SELECT` + `UPDATE`/`INSERT` instead of a `UNIQUE` constraint. Replaying the same file updates `play_start` to now and clears `play_end`/`resume_time`/`total_time`, bumping it to the top of the history without creating a duplicate.
