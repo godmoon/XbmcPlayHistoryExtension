@@ -13,8 +13,11 @@ class PlayHistoryDB:
     def _get_conn(self):
         conn = sqlite3.connect(self._db_path, timeout=30)
         conn.row_factory = sqlite3.Row
-        conn.execute("PRAGMA journal_mode=WAL")
-        conn.execute("PRAGMA synchronous=OFF")
+        try:
+            conn.execute("PRAGMA journal_mode=WAL")
+            conn.execute("PRAGMA synchronous=OFF")
+        except Exception:
+            pass
         return conn
 
     def _init_db(self):
@@ -82,6 +85,16 @@ class PlayHistoryDB:
         with self._lock:
             conn = self._get_conn()
             conn.execute("DELETE FROM play_history")
+            conn.commit()
+            conn.close()
+
+    def update_play_stop(self, file_path, resume_time, total_time):
+        with self._lock:
+            conn = self._get_conn()
+            conn.execute("""
+                UPDATE play_history SET resume_time=?, total_time=?, play_end=?
+                WHERE file_path=?
+            """, (resume_time, total_time, datetime.now().isoformat(), file_path))
             conn.commit()
             conn.close()
 

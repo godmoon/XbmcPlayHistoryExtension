@@ -8,7 +8,7 @@ if [ ! -d "$ADDON_DIR" ]; then
     exit 1
 fi
 
-VERSION=$(date +%Y%m%d)
+VERSION=$(date +%Y%m%d%H%M%S)
 
 python3 <<-EOF
 import re

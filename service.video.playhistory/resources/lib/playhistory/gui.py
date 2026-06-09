@@ -160,64 +160,34 @@ def _wait_for_playback_end():
 
 
 def _play_from_history(db, file_path, resume_time=None):
-    player = xbmc.Player()
-    ok = _open_playlist(file_path)
-    if ok:
-        player.play(xbmc.PlayList(xbmc.PLAYLIST_VIDEO))
-    else:
-        xbmc.executebuiltin('PlayMedia("{}")'.format(file_path))
-
     if resume_time:
-        wait_ms = 0
-        while wait_ms < 8000:
-            if player.isPlayingVideo():
+        ret = xbmcgui.Dialog().contextmenu(["从 {} 继续播放".format(_format_time(resume_time)), "从头开始播放"])
+        if ret < 0:
+            return
+        resume = (ret == 0)
+    else:
+        resume = False
+
+    xbmc.Player().play(file_path)
+
+    if resume:
+        for _ in range(200):
+            p = xbmc.Player()
+            if p.isPlayingVideo() and p.getTotalTime() > 0:
+                p.seekTime(resume_time)
                 break
             xbmc.sleep(100)
-            wait_ms += 100
-        if player.isPlayingVideo():
-            player.seekTime(resume_time)
 
     _wait_for_playback_end()
 
     try:
-        rtime = player.getTime()
-        ttime = player.getTotalTime()
+        p = xbmc.Player()
+        rtime = p.getTime()
+        ttime = p.getTotalTime()
         if rtime > 0:
             db.update_play_stop(file_path, rtime, ttime)
     except Exception:
         pass
 
+    xbmc.sleep(500)
     _navigate_to_dir(file_path)
-
-
-def _open_playlist(file_path):
-    try:
-        dir_path = os.path.dirname(file_path)
-        target = os.path.basename(file_path)
-
-        _, files = xbmcvfs.listdir(dir_path)
-        videos = sorted(
-            (f for f in files if os.path.splitext(f)[1].lower() in _VIDEO_EXTS),
-            key=str.lower,
-        )
-        if not videos:
-            return False
-
-        pl = xbmc.PlayList(xbmc.PLAYLIST_VIDEO)
-        pl.clear()
-        start = 0
-        for i, f in enumerate(videos):
-            pl.add(dir_path + "/" + f, xbmcgui.ListItem(path=dir_path + "/" + f))
-            if f == target:
-                start = i
-        pl.setposition(start)
-        return True
-    except Exception:
-        return False
-
-
-_VIDEO_EXTS = frozenset({
-    '.mkv', '.mp4', '.avi', '.mov', '.wmv', '.flv', '.m4v',
-    '.mpg', '.mpeg', '.webm', '.ts', '.ogv', '.3gp', '.divx',
-    '.mts', '.m2ts', '.vob', '.iso',
-})
