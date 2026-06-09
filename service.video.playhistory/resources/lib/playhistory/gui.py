@@ -168,8 +168,12 @@ def _play_from_history(db, file_path, resume_time=None):
     else:
         resume = False
 
-    if not _setup_playlist(file_path):
-        xbmc.Player().play(file_path)
+    dir_path = os.path.dirname(file_path)
+    if dir_path:
+        xbmc.executebuiltin('ActivateWindow(Videos,"{}")'.format(dir_path))
+        xbmc.sleep(700)
+
+    xbmc.executebuiltin('PlayMedia("{}")'.format(file_path))
 
     if resume:
         for _ in range(200):
@@ -192,48 +196,3 @@ def _play_from_history(db, file_path, resume_time=None):
 
     xbmc.sleep(500)
     _navigate_to_dir(file_path)
-
-
-def _setup_playlist(file_path):
-    try:
-        dir_path = os.path.dirname(file_path)
-        if not dir_path:
-            return False
-
-        result = xbmcvfs.listdir(dir_path)
-        if not result or len(result) < 2:
-            return False
-
-        files = result[1]
-        if not files:
-            return False
-
-        target = os.path.basename(file_path).lower()
-        videos = sorted(
-            [f for f in files if os.path.splitext(f)[1].lower() in _VIDEO_EXTS],
-            key=str.lower,
-        )
-        if len(videos) < 2:
-            return False
-
-        pl = xbmc.PlayList(xbmc.PLAYLIST_VIDEO)
-        pl.clear()
-        pos = 0
-        for i, f in enumerate(videos):
-            full = os.path.join(dir_path, f)
-            pl.add(full, xbmcgui.ListItem(path=full))
-            if f.lower() == target:
-                pos = i
-
-        pl.setposition(pos)
-        xbmc.Player().play(pl)
-        return True
-    except Exception:
-        return False
-
-
-_VIDEO_EXTS = frozenset({
-    '.mkv', '.mp4', '.avi', '.mov', '.wmv', '.flv', '.m4v',
-    '.mpg', '.mpeg', '.webm', '.ts', '.ogv', '.3gp', '.divx',
-    '.mts', '.m2ts', '.vob', '.iso',
-})
