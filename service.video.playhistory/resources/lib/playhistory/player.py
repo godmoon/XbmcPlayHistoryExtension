@@ -37,7 +37,6 @@ class PlaybackTracker:
 
             elif self.was_playing and self.current_file:
                 self._on_stop(player)
-                self.was_playing = False
 
         except Exception as e:
             log("poll error: {}".format(e), xbmc.LOGERROR)
@@ -49,6 +48,7 @@ class PlaybackTracker:
         title = xbmc.getInfoLabel("Player.Title")
         track_video = get_setting("track_video_only", False)
         if track_video and not player.isPlayingVideo():
+            self.current_file = None
             return
 
         self.current_file = file_path
@@ -65,6 +65,6 @@ class PlaybackTracker:
         self.current_file = None
         self.resume_time = 0
         self.total_time = 0
+        self.was_playing = False
         log("stop: file={} resume={} total={}".format(file_path, rtime, ttime))
-        if ttime > 0:
-            self.db.update_play_stop(file_path, rtime, ttime)
+        self.db.update_play_stop(file_path, rtime, ttime)

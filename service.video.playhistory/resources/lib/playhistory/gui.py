@@ -2,6 +2,7 @@ import os
 
 import xbmc
 import xbmcgui
+import xbmcvfs
 
 from .common import ADDON_NAME, log
 
@@ -82,9 +83,6 @@ def show_history(db):
         if not file_path:
             continue
 
-        resume_time = item.get("resume_time", 0) or 0
-        total_time = item.get("total_time", 0) or 0
-
         labels = []
         actions = []
 
@@ -92,13 +90,7 @@ def show_history(db):
             labels.append("倍速控制")
             actions.append("speed")
 
-        if resume_time > 0 and total_time > 0:
-            resume_pct = resume_time / total_time
-            if resume_pct < 0.95:
-                labels.append("从 {} 继续播放".format(_format_time(resume_time)))
-                actions.append("resume")
-
-        labels.append("从头开始播放")
+        labels.append("播放")
         actions.append("play")
 
         labels.append("删除此记录")
@@ -112,11 +104,8 @@ def show_history(db):
         if action == "speed":
             show_speed_control()
             continue
-        elif action == "resume":
-            _play_with_resume(file_path, resume_time)
-            break
         elif action == "play":
-            _play_from_start(file_path)
+            _play_with_playlist(file_path)
             break
         elif action == "delete":
             db.delete_entry(item["id"])
@@ -165,22 +154,36 @@ def _wait_for_playback_end():
             break
 
 
-def _play_with_resume(file_path, resume_time):
-    player = xbmc.Player()
-    player.play(file_path)
-    wait_ms = 0
-    while wait_ms < 8000:
-        if player.isPlayingVideo() or player.isPlayingAudio():
+VIDEO_EXTS = frozenset({
+    '.mkv', '.mp4', '.avi', '.mov', '.wmv', '.flv', '.m4v',
+    '.mpg', '.mpeg', '.webm', '.ts', '.ogv', '.3gp', '.divx',
+    '.mts', '.m2ts', '.vob', '.iso',
+})
+
+
+def _play_with_playlist(file_path):
+    dir_path = os.path.dirname(file_path)
+    target_basename = os.path.basename(file_path)
+
+    _, files = xbmcvfs.listdir(dir_path)
+    videos = sorted(
+        [f for f in files if os.path.splitext(f)[1].lower() in VIDEO_EXTS],
+        key=str.lower,
+    )
+
+    start_index = 0
+    for i, f in enumerate(videos):
+        if f == target_basename:
+            start_index = i
             break
-        xbmc.sleep(100)
-        wait_ms += 100
-    if player.isPlayingVideo() or player.isPlayingAudio():
-        player.seekTime(resume_time)
-    _wait_for_playback_end()
-    _navigate_to_dir(file_path)
 
+    playlist = xbmc.PlayList(xbmc.PLAYLIST_VIDEO)
+    playlist.clear()
+    for f in videos:
+        full_path = dir_path + "/" + f
+        li = xbmcgui.ListItem(path=full_path)
+        playlist.add(full_path, li)
 
-def _play_from_start(file_path):
-    xbmc.Player().play(file_path)
+    xbmc.Player().play(playlist, startpos=start_index)
     _wait_for_playback_end()
     _navigate_to_dir(file_path)
