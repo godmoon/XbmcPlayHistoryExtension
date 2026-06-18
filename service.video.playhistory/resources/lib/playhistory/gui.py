@@ -83,14 +83,8 @@ def show_history(db):
         if not file_path:
             continue
 
-        labels = []
-        actions = []
-
-        if xbmc.Player().isPlayingVideo():
-            labels.append("倍速控制")
-            actions.append("speed")
-
-        labels.append("定位")
+        labels = ["定位"]
+        actions = ["locate"]
         actions.append("locate")
 
         labels.append("删除此记录")
@@ -101,11 +95,8 @@ def show_history(db):
             continue
 
         action = actions[choice]
-        if action == "speed":
-            show_speed_control()
-            continue
-        elif action == "locate":
-            _play_from_history(db, file_path)
+        if action == "locate":
+            _navigate_with_focus(file_path)
             break
         elif action == "delete":
             db.delete_entry(item["id"])
@@ -114,32 +105,6 @@ def show_history(db):
             if not items:
                 xbmcgui.Dialog().ok(ADDON_NAME, "记录已全部删除")
                 break
-
-
-def show_speed_control():
-    player = xbmc.Player()
-    if not player.isPlayingVideo():
-        xbmcgui.Dialog().notification(ADDON_NAME, "没有正在播放的视频", xbmcgui.NOTIFICATION_WARNING, 2000)
-        return
-
-    speeds = ["0.25x", "0.5x", "0.75x", "1.0x (正常)", "1.25x", "1.5x", "2.0x", "3.0x"]
-    values = [0.25, 0.5, 0.75, 1.0, 1.25, 1.5, 2.0, 3.0]
-
-    current = player.getSpeed()
-    default = -1
-    for i, v in enumerate(values):
-        if abs(current - v) < 0.01:
-            default = i
-            break
-
-    selected = xbmcgui.Dialog().select("选择播放速度 - {:.2f}x (当前)".format(current) if current != 1.0 else "选择播放速度", speeds, preselect=default)
-    if selected >= 0:
-        player.setSpeed(values[selected])
-        xbmcgui.Dialog().notification(ADDON_NAME, "播放速度: {}".format(speeds[selected]), xbmcgui.NOTIFICATION_INFO, 1500)
-
-
-def _play_from_history(db, file_path):
-    _navigate_with_focus(file_path)
 
 
 def _navigate_with_focus(file_path):
@@ -177,3 +142,7 @@ def _navigate_with_focus(file_path):
     for _ in range(pos):
         xbmc.executebuiltin("Action(Down)")
         xbmc.sleep(60)
+
+        label = xbmc.getInfoLabel("Container.CurrentItem.Label").lower()
+        if label == "..":
+            break
